@@ -2,7 +2,7 @@
 mod utils;
 
 use crate::utils::{Textures, point_in_rect};
-use macroquad::prelude::*;
+use macroquad::{prelude::*, texture};
 
 #[macroquad::main("hrf-trainer")]
 async fn main() {
@@ -22,17 +22,7 @@ async fn main() {
 
         game_state.update();
 
-        let t = &game_state.textures.map;
-        draw_texture_ex(
-            &t,
-            game_state.map_rect.x,
-            game_state.map_rect.y,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(Vec2::new(game_state.map_rect.w, game_state.map_rect.h)),
-                ..Default::default()
-            },
-        );
+        game_state.draw();
 
         game_state.debug_draw();
 
@@ -42,19 +32,79 @@ async fn main() {
 
 struct GameState {
     score: u32,
-    map_rect: Rect,
+    buttons: Vec<Button>,
     is_dragging: bool,
-    drag_offset: Vec2,
-    textures: Textures,
+    draggable_index: usize,
+    draggables: Vec<Draggable>,
+    textures: Vec<Texture2D>,
 }
 
 impl GameState {
     fn new(textures: Textures) -> Self {
+        let mut buttons = vec![];
+        let red_button = Button::new(0, Vec2::new(0.0, 100.0), 1);
+        buttons.push(red_button);
+
+        let mut draggables = vec![];
+        let red_buoy = Draggable::new(
+            Rect::new(
+                0.0,
+                0.0,
+                textures.red_buoy.width(),
+                textures.red_buoy.height(),
+            ),
+            1,
+        );
+        draggables.push(red_buoy);
+        let green_buoy = Draggable::new(
+            Rect::new(
+                0.0,
+                0.0,
+                textures.green_buoy.width(),
+                textures.green_buoy.height(),
+            ),
+            2,
+        );
+        draggables.push(green_buoy);
+        let colorful_buoy = Draggable::new(
+            Rect::new(
+                0.0,
+                0.0,
+                textures.colorful_buoy.width(),
+                textures.colorful_buoy.height(),
+            ),
+            3,
+        );
+        draggables.push(colorful_buoy);
+        let orange_buoy = Draggable::new(
+            Rect::new(
+                0.0,
+                0.0,
+                textures.orange_buoy.width(),
+                textures.orange_buoy.height(),
+            ),
+            4,
+        );
+        draggables.push(orange_buoy);
+        let map = Draggable::new(
+            Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
+            0,
+        );
+        draggables.push(map);
+
+        let textures = vec![
+            textures.map,
+            textures.red_buoy,
+            textures.green_buoy,
+            textures.colorful_buoy,
+            textures.orange_buoy,
+        ];
         Self {
             score: 0,
-            map_rect: Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
+            buttons,
             is_dragging: false,
-            drag_offset: Vec2::ZERO,
+            draggable_index: 0,
+            draggables,
             textures,
         }
     }
@@ -67,42 +117,60 @@ impl GameState {
             // handle mouse input
             input_position = Vec2::from(mouse_position());
             if is_mouse_button_pressed(MouseButton::Left) {
-                if point_in_rect(input_position, self.map_rect) {
-                    self.is_dragging = true;
-                    self.drag_offset = Vec2::new(self.map_rect.x, self.map_rect.y) - input_position;
+                for (index, draggable) in self.draggables.iter_mut().enumerate() {
+                    if point_in_rect(input_position, draggable.rect) {
+                        self.is_dragging = true;
+                        self.draggable_index = index;
+                        draggable.drag_offset =
+                            Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
+                        break;
+                    }
                 }
             } else if is_mouse_button_released(MouseButton::Left) {
                 self.is_dragging = false;
+                self.draggable_index = 0;
             }
         } else {
             // handle touch input
             let touch = &touches[0];
             input_position = touch.position;
             if touch.phase == TouchPhase::Started {
-                self.is_dragging = true;
-                self.drag_offset = Vec2::new(self.map_rect.x, self.map_rect.y) - input_position;
+                for (index, draggable) in self.draggables.iter_mut().enumerate() {
+                    if point_in_rect(input_position, draggable.rect) {
+                        self.is_dragging = true;
+                        self.draggable_index = index;
+                        draggable.drag_offset =
+                            Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
+                        break;
+                    }
+                }
             } else if touch.phase == TouchPhase::Ended || touch.phase == TouchPhase::Cancelled {
                 self.is_dragging = false;
+                self.draggable_index = 0;
             }
         }
 
         if self.is_dragging {
-            let mut new_pos = input_position + self.drag_offset;
-            let min = Vec2::new(
-                screen_width() - self.map_rect.w,
-                screen_height() - self.map_rect.h,
-            );
-            new_pos = new_pos.clamp(min, Vec2::ZERO);
-            self.map_rect.x = new_pos.x;
-            self.map_rect.y = new_pos.y;
+            let draggable = &mut self.draggables[self.draggable_index];
+            draggable.drag(input_position);
+        }
+    }
+
+    fn draw(&self) {
+        for draggable in self.draggables.iter().rev() {
+            draggable.draw(&self);
+        }
+        for button in &self.buttons {
+            button.draw(&self.textures);
         }
     }
 
     fn debug_draw(&self) {
         let info = format!(
-            "Version: 0.0.1.1033\nis_dragging: {}\nhas_touch: {}",
+            "Version: 0.0.1.0328\nis_dragging: {}\nhas_touch: {}\ndraggable: {}",
             self.is_dragging,
-            !touches().is_empty()
+            !touches().is_empty(),
+            self.draggable_index,
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
     }
@@ -110,4 +178,75 @@ impl GameState {
 
 struct Item {
     id: u32,
+}
+
+struct Draggable {
+    rect: Rect,
+    texture_id: usize,
+    drag_offset: Vec2,
+}
+
+impl Draggable {
+    fn new(rect: Rect, texture_id: usize) -> Self {
+        Self {
+            rect,
+            texture_id,
+            drag_offset: Vec2::ZERO,
+        }
+    }
+
+    fn drag(&mut self, input_position: Vec2) {
+        let mut new_pos = input_position + self.drag_offset;
+        if self.rect.w > screen_width() || self.rect.h > screen_height() {
+            let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
+            new_pos = new_pos.clamp(min, Vec2::ZERO);
+        }
+        self.rect.x = new_pos.x;
+        self.rect.y = new_pos.y;
+    }
+
+    fn draw(&self, game_state: &GameState) {
+        let t = &game_state.textures[self.texture_id];
+        draw_texture_ex(
+            t,
+            self.rect.x,
+            self.rect.y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(self.rect.w, self.rect.h)),
+                ..Default::default()
+            },
+        );
+    }
+}
+
+struct Button {
+    id: u8,
+    rect: Rect,
+    texture_id: usize,
+}
+
+impl Button {
+    fn new(id: u8, position: Vec2, texture_id: usize) -> Self {
+        Self {
+            id,
+            rect: Rect::new(position.x, position.y, 60.0, 60.0),
+            texture_id,
+        }
+    }
+
+    fn draw(&self, textures: &Vec<Texture2D>) {
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, GRAY);
+        let t = &textures[self.texture_id];
+        draw_texture_ex(
+            t,
+            self.rect.x + 20.0,
+            self.rect.y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(15.0, 60.0)),
+                ..Default::default()
+            },
+        );
+    }
 }
