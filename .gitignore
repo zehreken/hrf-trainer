@@ -39,6 +39,7 @@ Cargo.lock
 **/*.rs.bk
 
 ### VisualStudioCode ###
+.vscode/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

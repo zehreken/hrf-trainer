@@ -2,7 +2,7 @@
 mod utils;
 
 use crate::utils::{Textures, point_in_rect};
-use macroquad::{prelude::*, texture};
+use macroquad::prelude::*;
 
 #[macroquad::main("hrf-trainer")]
 async fn main() {
@@ -32,10 +32,12 @@ async fn main() {
 
 struct GameState {
     score: u32,
+    map: Draggable,
     buttons: Vec<Button>,
     is_dragging: bool,
-    draggable_index: usize,
-    draggables: Vec<Draggable>,
+    current_draggable: Option<Draggable>,
+    button_index: Option<usize>,
+    dropped_items: Vec<DroppedItem>,
     textures: Vec<Texture2D>,
 }
 
@@ -44,53 +46,17 @@ impl GameState {
         let mut buttons = vec![];
         let red_button = Button::new(0, Vec2::new(0.0, 100.0), 1);
         buttons.push(red_button);
+        let green_button = Button::new(1, Vec2::new(0.0, 180.0), 2);
+        buttons.push(green_button);
+        let colorful_button = Button::new(2, Vec2::new(0.0, 260.0), 3);
+        buttons.push(colorful_button);
+        let orange_button = Button::new(3, Vec2::new(0.0, 340.0), 4);
+        buttons.push(orange_button);
 
-        let mut draggables = vec![];
-        let red_buoy = Draggable::new(
-            Rect::new(
-                0.0,
-                0.0,
-                textures.red_buoy.width(),
-                textures.red_buoy.height(),
-            ),
-            1,
-        );
-        draggables.push(red_buoy);
-        let green_buoy = Draggable::new(
-            Rect::new(
-                0.0,
-                0.0,
-                textures.green_buoy.width(),
-                textures.green_buoy.height(),
-            ),
-            2,
-        );
-        draggables.push(green_buoy);
-        let colorful_buoy = Draggable::new(
-            Rect::new(
-                0.0,
-                0.0,
-                textures.colorful_buoy.width(),
-                textures.colorful_buoy.height(),
-            ),
-            3,
-        );
-        draggables.push(colorful_buoy);
-        let orange_buoy = Draggable::new(
-            Rect::new(
-                0.0,
-                0.0,
-                textures.orange_buoy.width(),
-                textures.orange_buoy.height(),
-            ),
-            4,
-        );
-        draggables.push(orange_buoy);
         let map = Draggable::new(
             Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
             0,
         );
-        draggables.push(map);
 
         let textures = vec![
             textures.map,
@@ -101,10 +67,12 @@ impl GameState {
         ];
         Self {
             score: 0,
+            map,
             buttons,
             is_dragging: false,
-            draggable_index: 0,
-            draggables,
+            current_draggable: None,
+            button_index: None,
+            dropped_items: vec![],
             textures,
         }
     }
@@ -117,67 +85,128 @@ impl GameState {
             // handle mouse input
             input_position = Vec2::from(mouse_position());
             if is_mouse_button_pressed(MouseButton::Left) {
-                for (index, draggable) in self.draggables.iter_mut().enumerate() {
-                    if point_in_rect(input_position, draggable.rect) {
+                if point_in_rect(input_position, self.map.rect) {
+                    self.is_dragging = true;
+                    self.map.drag_offset =
+                        Vec2::new(self.map.rect.x, self.map.rect.y) - input_position;
+                }
+                for (index, button) in self.buttons.iter().enumerate() {
+                    if point_in_rect(input_position, button.rect) {
+                        self.current_draggable = Some(Draggable::new(
+                            Rect::new(
+                                input_position.x,
+                                input_position.y,
+                                self.textures[button.texture_id].width(),
+                                self.textures[button.texture_id].height(),
+                            ),
+                            button.texture_id,
+                        ));
                         self.is_dragging = true;
-                        self.draggable_index = index;
-                        draggable.drag_offset =
-                            Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
+                        self.button_index = Some(index);
                         break;
                     }
                 }
             } else if is_mouse_button_released(MouseButton::Left) {
+                if self.button_index.is_some()
+                    && point_in_rect(
+                        input_position,
+                        self.buttons[self.button_index.unwrap()].rect,
+                    )
+                {
+                    self.button_index = None;
+                } else if let Some(draggable) = &self.current_draggable {
+                    self.dropped_items
+                        .push(DroppedItem::new(draggable.texture_id, input_position));
+                }
+                self.current_draggable = None;
                 self.is_dragging = false;
-                self.draggable_index = 0;
             }
         } else {
             // handle touch input
             let touch = &touches[0];
             input_position = touch.position;
             if touch.phase == TouchPhase::Started {
-                for (index, draggable) in self.draggables.iter_mut().enumerate() {
-                    if point_in_rect(input_position, draggable.rect) {
-                        self.is_dragging = true;
-                        self.draggable_index = index;
-                        draggable.drag_offset =
-                            Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
-                        break;
-                    }
-                }
+                // for (index, draggable) in self.draggables.iter_mut().enumerate() {
+                //     if point_in_rect(input_position, draggable.rect) {
+                //         self.is_dragging = true;
+                //         self.button_index = index;
+                //         draggable.drag_offset =
+                //             Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
+                //         break;
+                //     }
+                // }
             } else if touch.phase == TouchPhase::Ended || touch.phase == TouchPhase::Cancelled {
                 self.is_dragging = false;
-                self.draggable_index = 0;
+                self.button_index = None;
             }
         }
 
-        if self.is_dragging {
-            let draggable = &mut self.draggables[self.draggable_index];
+        if let Some(draggable) = &mut self.current_draggable {
             draggable.drag(input_position);
+        } else if self.is_dragging {
+            for dropped_item in &mut self.dropped_items {
+                let position_offset = input_position + self.map.drag_offset
+                    - Vec2::new(self.map.rect.x, self.map.rect.y);
+                dropped_item.update(position_offset);
+            }
+            self.map.drag(input_position);
         }
     }
 
     fn draw(&self) {
-        for draggable in self.draggables.iter().rev() {
-            draggable.draw(&self);
+        self.map.draw(&self.textures);
+        for draggable in &self.dropped_items {
+            draggable.draw(&self.textures);
         }
         for button in &self.buttons {
             button.draw(&self.textures);
+        }
+        if let Some(draggable) = &self.current_draggable {
+            draggable.draw(&self.textures);
         }
     }
 
     fn debug_draw(&self) {
         let info = format!(
-            "Version: 0.0.1.0328\nis_dragging: {}\nhas_touch: {}\ndraggable: {}",
+            "Version: 0.0.1.0328\nis_dragging: {}\nhas_touch: {}\nbutton: {}",
             self.is_dragging,
             !touches().is_empty(),
-            self.draggable_index,
+            self.button_index.is_some(),
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
     }
 }
 
-struct Item {
-    id: u32,
+struct DroppedItem {
+    texture_id: usize,
+    position_on_map: Vec2,
+}
+
+impl DroppedItem {
+    fn new(texture_id: usize, position: Vec2) -> Self {
+        Self {
+            texture_id,
+            position_on_map: position,
+        }
+    }
+
+    fn update(&mut self, position_offset: Vec2) {
+        self.position_on_map += position_offset;
+    }
+
+    fn draw(&self, textures: &Vec<Texture2D>) {
+        let t = &textures[self.texture_id];
+        draw_texture_ex(
+            t,
+            self.position_on_map.x + 20.0,
+            self.position_on_map.y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(10.0, 40.0)),
+                ..Default::default()
+            },
+        );
+    }
 }
 
 struct Draggable {
@@ -197,16 +226,16 @@ impl Draggable {
 
     fn drag(&mut self, input_position: Vec2) {
         let mut new_pos = input_position + self.drag_offset;
-        if self.rect.w > screen_width() || self.rect.h > screen_height() {
-            let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
-            new_pos = new_pos.clamp(min, Vec2::ZERO);
-        }
+        // if self.rect.w > screen_width() || self.rect.h > screen_height() {
+        //     let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
+        //     new_pos = new_pos.clamp(min, Vec2::ZERO);
+        // }
         self.rect.x = new_pos.x;
         self.rect.y = new_pos.y;
     }
 
-    fn draw(&self, game_state: &GameState) {
-        let t = &game_state.textures[self.texture_id];
+    fn draw(&self, textures: &Vec<Texture2D>) {
+        let t = &textures[self.texture_id];
         draw_texture_ex(
             t,
             self.rect.x,
