@@ -120,7 +120,8 @@ impl GameState {
         }
         for (index, button) in self.buttons.iter().enumerate() {
             if point_in_rect(input_position, button.rect) {
-                self.current_draggable = Some(Draggable::new(
+                let size = self.textures[button.texture_id].size();
+                let mut draggable = Draggable::new(
                     Rect::new(
                         input_position.x,
                         input_position.y,
@@ -128,7 +129,9 @@ impl GameState {
                         self.textures[button.texture_id].height(),
                     ),
                     button.texture_id,
-                ));
+                );
+                draggable.drag_offset = -size / 2.0;
+                self.current_draggable = Some(draggable);
                 self.is_dragging = true;
                 self.button_index = Some(index);
                 break;
@@ -195,13 +198,14 @@ impl DroppedItem {
 
     fn draw(&self, textures: &Vec<Texture2D>) {
         let t = &textures[self.texture_id];
+        let size = t.size() * 0.25;
         draw_texture_ex(
             t,
-            self.position_on_map.x + 20.0,
-            self.position_on_map.y,
+            self.position_on_map.x - size.x / 2.0,
+            self.position_on_map.y - size.y / 2.0 - t.height() / 2.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(Vec2::new(t.width() * 0.25, t.height() * 0.25)),
+                dest_size: Some(Vec2::new(size.x, size.y)),
                 ..Default::default()
             },
         );
@@ -244,18 +248,18 @@ impl Draggable {
             self.rect.y,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(Vec2::new(self.rect.w, self.rect.h)),
+                dest_size: Some(t.size()),
                 ..Default::default()
             },
         );
-        let t = &textures[6]; // cross
+        let cross = &textures[6];
         draw_texture_ex(
-            t,
-            self.rect.x,
-            self.rect.y - 40.0,
+            cross,
+            self.rect.x + (t.width() - cross.width()) / 2.0,
+            self.rect.y - cross.width() / 2.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(Vec2::new(t.width(), t.height())),
+                dest_size: Some(Vec2::new(cross.width(), cross.height())),
                 ..Default::default()
             },
         );
