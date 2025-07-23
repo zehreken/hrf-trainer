@@ -3,6 +3,8 @@ use macroquad::prelude::*;
 
 pub struct Textures {
     pub map: Texture2D,
+    pub button_background: Texture2D,
+    pub cross: Texture2D,
     pub green_buoy: Texture2D,
     pub red_buoy: Texture2D,
     pub colorful_buoy: Texture2D,
@@ -15,6 +17,12 @@ impl Textures {
         let map = load_texture("assets/arstaviken_map.png")
             .await
             .map_err(|_| "Failed to load arstaviken_map.png")?;
+        let button_background = load_texture("assets/button.png")
+            .await
+            .map_err(|_| "Failed to load button.png")?;
+        let cross = load_texture("assets/cross.png")
+            .await
+            .map_err(|_| "Failed to load cross.png")?;
         let green_buoy = load_texture("assets/green_20x80.png")
             .await
             .map_err(|_| "Failed to load green_20x80.png")?;
@@ -30,6 +38,8 @@ impl Textures {
 
         Ok(Self {
             map,
+            button_background,
+            cross,
             green_buoy,
             red_buoy,
             colorful_buoy,

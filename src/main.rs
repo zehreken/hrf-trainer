@@ -64,6 +64,8 @@ impl GameState {
             textures.green_buoy,
             textures.colorful_buoy,
             textures.orange_buoy,
+            textures.button_background,
+            textures.cross,
         ];
         Self {
             score: 0,
@@ -79,78 +81,75 @@ impl GameState {
 
     fn update(&mut self) {
         let touches = touches();
-        let mut input_position = Vec2::ZERO;
 
-        if touches.is_empty() {
-            // handle mouse input
-            input_position = Vec2::from(mouse_position());
-            if is_mouse_button_pressed(MouseButton::Left) {
-                if point_in_rect(input_position, self.map.rect) {
-                    self.is_dragging = true;
-                    self.map.drag_offset =
-                        Vec2::new(self.map.rect.x, self.map.rect.y) - input_position;
-                }
-                for (index, button) in self.buttons.iter().enumerate() {
-                    if point_in_rect(input_position, button.rect) {
-                        self.current_draggable = Some(Draggable::new(
-                            Rect::new(
-                                input_position.x,
-                                input_position.y,
-                                self.textures[button.texture_id].width(),
-                                self.textures[button.texture_id].height(),
-                            ),
-                            button.texture_id,
-                        ));
-                        self.is_dragging = true;
-                        self.button_index = Some(index);
-                        break;
-                    }
-                }
-            } else if is_mouse_button_released(MouseButton::Left) {
-                if self.button_index.is_some()
-                    && point_in_rect(
-                        input_position,
-                        self.buttons[self.button_index.unwrap()].rect,
-                    )
-                {
-                    self.button_index = None;
-                } else if let Some(draggable) = &self.current_draggable {
-                    self.dropped_items
-                        .push(DroppedItem::new(draggable.texture_id, input_position));
-                }
-                self.current_draggable = None;
-                self.is_dragging = false;
-            }
+        let (input_position, is_started, is_ended) = if touches.is_empty() {
+            let pos = Vec2::from(mouse_position());
+            let is_started = is_mouse_button_pressed(MouseButton::Left);
+            let is_ended = is_mouse_button_released(MouseButton::Left);
+
+            (pos, is_started, is_ended)
         } else {
-            // handle touch input
             let touch = &touches[0];
-            input_position = touch.position;
-            if touch.phase == TouchPhase::Started {
-                // for (index, draggable) in self.draggables.iter_mut().enumerate() {
-                //     if point_in_rect(input_position, draggable.rect) {
-                //         self.is_dragging = true;
-                //         self.button_index = index;
-                //         draggable.drag_offset =
-                //             Vec2::new(draggable.rect.x, draggable.rect.y) - input_position;
-                //         break;
-                //     }
-                // }
-            } else if touch.phase == TouchPhase::Ended || touch.phase == TouchPhase::Cancelled {
-                self.is_dragging = false;
-                self.button_index = None;
-            }
+            let pos = Vec2::from(touch.position);
+            let is_started = touch.phase == TouchPhase::Started;
+            let is_ended = touch.phase == TouchPhase::Ended || touch.phase == TouchPhase::Cancelled;
+
+            (pos, is_started, is_ended)
+        };
+
+        if is_started {
+            self.handle_start(input_position);
+        } else if is_ended {
+            self.handle_end(input_position);
         }
 
         if let Some(draggable) = &mut self.current_draggable {
             draggable.drag(input_position);
         } else if self.is_dragging {
+            let delta = self.map.drag(input_position);
             for dropped_item in &mut self.dropped_items {
-                let position_offset = input_position + self.map.drag_offset
-                    - Vec2::new(self.map.rect.x, self.map.rect.y);
-                dropped_item.update(position_offset);
+                dropped_item.update(delta);
             }
-            self.map.drag(input_position);
         }
+    }
+
+    fn handle_start(&mut self, input_position: Vec2) {
+        if point_in_rect(input_position, self.map.rect) {
+            self.is_dragging = true;
+            self.map.drag_offset = Vec2::new(self.map.rect.x, self.map.rect.y) - input_position;
+        }
+        for (index, button) in self.buttons.iter().enumerate() {
+            if point_in_rect(input_position, button.rect) {
+                self.current_draggable = Some(Draggable::new(
+                    Rect::new(
+                        input_position.x,
+                        input_position.y,
+                        self.textures[button.texture_id].width(),
+                        self.textures[button.texture_id].height(),
+                    ),
+                    button.texture_id,
+                ));
+                self.is_dragging = true;
+                self.button_index = Some(index);
+                break;
+            }
+        }
+    }
+
+    fn handle_end(&mut self, input_position: Vec2) {
+        if self.button_index.is_some()
+            && point_in_rect(
+                input_position,
+                self.buttons[self.button_index.unwrap()].rect,
+            )
+        {
+            self.button_index = None;
+        } else if let Some(draggable) = &self.current_draggable {
+            self.dropped_items
+                .push(DroppedItem::new(draggable.texture_id, input_position));
+        }
+        self.current_draggable = None;
+        self.is_dragging = false;
     }
 
     fn draw(&self) {
@@ -202,7 +201,7 @@ impl DroppedItem {
             self.position_on_map.y,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(Vec2::new(10.0, 40.0)),
+                dest_size: Some(Vec2::new(t.width() * 0.25, t.height() * 0.25)),
                 ..Default::default()
             },
         );
@@ -224,14 +223,17 @@ impl Draggable {
         }
     }
 
-    fn drag(&mut self, input_position: Vec2) {
+    fn drag(&mut self, input_position: Vec2) -> Vec2 {
         let mut new_pos = input_position + self.drag_offset;
-        // if self.rect.w > screen_width() || self.rect.h > screen_height() {
-        //     let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
-        //     new_pos = new_pos.clamp(min, Vec2::ZERO);
-        // }
+        if self.rect.w > screen_width() || self.rect.h > screen_height() {
+            let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
+            new_pos = new_pos.clamp(min, Vec2::ZERO);
+        }
+        let delta = new_pos - Vec2::new(self.rect.x, self.rect.y);
         self.rect.x = new_pos.x;
         self.rect.y = new_pos.y;
+
+        delta
     }
 
     fn draw(&self, textures: &Vec<Texture2D>) {
@@ -246,11 +248,21 @@ impl Draggable {
                 ..Default::default()
             },
         );
+        let t = &textures[6]; // cross
+        draw_texture_ex(
+            t,
+            self.rect.x,
+            self.rect.y - 40.0,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(t.width(), t.height())),
+                ..Default::default()
+            },
+        );
     }
 }
 
 struct Button {
-    id: u8,
     rect: Rect,
     texture_id: usize,
 }
@@ -258,22 +270,32 @@ struct Button {
 impl Button {
     fn new(id: u8, position: Vec2, texture_id: usize) -> Self {
         Self {
-            id,
             rect: Rect::new(position.x, position.y, 60.0, 60.0),
             texture_id,
         }
     }
 
     fn draw(&self, textures: &Vec<Texture2D>) {
-        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, GRAY);
-        let t = &textures[self.texture_id];
+        let t = &textures[5];
         draw_texture_ex(
             t,
-            self.rect.x + 20.0,
+            self.rect.x,
             self.rect.y,
+            Color::new(1.0, 1.0, 1.0, 0.5),
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(60.0, 60.0)),
+                ..Default::default()
+            },
+        );
+        let t = &textures[self.texture_id];
+        let size = Vec2::new(t.width() * 0.5, t.height() * 0.5);
+        draw_texture_ex(
+            t,
+            self.rect.x + 30.0 - size.x / 2.0,
+            self.rect.y + 30.0 - size.y / 2.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(Vec2::new(15.0, 60.0)),
+                dest_size: Some(Vec2::new(size.x, size.y)),
                 ..Default::default()
             },
         );
