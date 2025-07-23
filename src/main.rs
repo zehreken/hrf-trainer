@@ -4,6 +4,8 @@ mod utils;
 use crate::utils::{Textures, point_in_rect};
 use macroquad::prelude::*;
 
+const CROSS_OFFSET: f32 = 20.0;
+
 #[macroquad::main("hrf-trainer")]
 async fn main() {
     let textures = match Textures::load().await {
@@ -202,7 +204,7 @@ impl DroppedItem {
         draw_texture_ex(
             t,
             self.position_on_map.x - size.x / 2.0,
-            self.position_on_map.y - size.y / 2.0 - t.height() / 2.0,
+            self.position_on_map.y - size.y / 2.0 - t.height() / 2.0 - CROSS_OFFSET,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(Vec2::new(size.x, size.y)),
@@ -256,7 +258,7 @@ impl Draggable {
         draw_texture_ex(
             cross,
             self.rect.x + (t.width() - cross.width()) / 2.0,
-            self.rect.y - cross.width() / 2.0,
+            self.rect.y - cross.width() / 2.0 - CROSS_OFFSET,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(Vec2::new(cross.width(), cross.height())),
