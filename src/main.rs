@@ -3,7 +3,7 @@ mod map_data;
 mod utils;
 
 use crate::utils::{Textures, point_in_rect};
-use macroquad::prelude::*;
+use macroquad::{input, prelude::*};
 
 const CROSS_OFFSET: f32 = 20.0;
 
@@ -108,6 +108,10 @@ impl GameState {
 
             (pos, is_started, is_ended)
         };
+        if is_key_pressed(KeyCode::Space) {
+            println!("reveal");
+            self.reveal();
+        }
 
         if is_started {
             self.handle_start(input_position);
@@ -190,6 +194,14 @@ impl GameState {
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
     }
+
+    fn reveal(&mut self) {
+        for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
+            for pos in positions {
+                self.dropped_items.push(DroppedItem::new(*texture_id, *pos));
+            }
+        }
+    }
 }
 
 struct DroppedItem {
@@ -211,7 +223,7 @@ impl DroppedItem {
 
     fn draw(&self, textures: &Vec<Texture2D>) {
         let t = &textures[self.texture_id];
-        let size = t.size() * 0.25;
+        let size = t.size() * 0.5;
         draw_texture_ex(
             t,
             self.position_on_map.x - size.x / 2.0,
