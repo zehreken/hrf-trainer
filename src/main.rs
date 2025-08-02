@@ -1,4 +1,5 @@
 // main.rs
+mod map_data;
 mod utils;
 
 use crate::utils::{Textures, point_in_rect};
@@ -6,7 +7,7 @@ use macroquad::prelude::*;
 
 const CROSS_OFFSET: f32 = 20.0;
 
-#[macroquad::main("hrf-trainer")]
+#[macroquad::main(window_conf)]
 async fn main() {
     let textures = match Textures::load().await {
         Ok(textures) => textures,
@@ -29,6 +30,15 @@ async fn main() {
         game_state.debug_draw();
 
         next_frame().await;
+    }
+}
+
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "hrf-trainer".to_owned(),
+        window_width: 1200,
+        window_height: 800,
+        ..Default::default()
     }
 }
 
@@ -152,6 +162,7 @@ impl GameState {
         } else if let Some(draggable) = &self.current_draggable {
             self.dropped_items
                 .push(DroppedItem::new(draggable.texture_id, input_position));
+            dbg!(draggable.texture_id, input_position - self.map.rect.point());
         }
         self.current_draggable = None;
         self.is_dragging = false;
