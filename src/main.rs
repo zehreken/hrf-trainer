@@ -132,7 +132,7 @@ impl GameState {
     fn handle_start(&mut self, input_position: Vec2) {
         if point_in_rect(input_position, self.map.rect) {
             self.is_dragging = true;
-            self.map.drag_offset = Vec2::new(self.map.rect.x, self.map.rect.y) - input_position;
+            self.map.drag_offset = self.map.rect.point() - input_position;
         }
         for (index, button) in self.buttons.iter().enumerate() {
             if point_in_rect(input_position, button.rect) {
@@ -198,7 +198,8 @@ impl GameState {
     fn reveal(&mut self) {
         for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
             for pos in positions {
-                self.dropped_items.push(DroppedItem::new(*texture_id, *pos));
+                self.dropped_items
+                    .push(DroppedItem::new(*texture_id, *pos + self.map.rect.point()));
             }
         }
     }
@@ -258,7 +259,7 @@ impl Draggable {
             let min = Vec2::new(screen_width() - self.rect.w, screen_height() - self.rect.h);
             new_pos = new_pos.clamp(min, Vec2::ZERO);
         }
-        let delta = new_pos - Vec2::new(self.rect.x, self.rect.y);
+        let delta = new_pos - self.rect.point();
         self.rect.x = new_pos.x;
         self.rect.y = new_pos.y;
 
