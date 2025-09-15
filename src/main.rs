@@ -95,7 +95,8 @@ impl GameState {
         let touches = touches();
 
         if input::is_mouse_button_pressed(MouseButton::Left) {
-            dbg!("{}", mouse_position());
+            let mouse_pos: Vec2 = mouse_position().into();
+            dbg!("{}", mouse_pos - self.map.rect.point());
         }
 
         let (input_position, is_started, is_ended) = if touches.is_empty() {
