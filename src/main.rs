@@ -94,6 +94,10 @@ impl GameState {
     fn update(&mut self) {
         let touches = touches();
 
+        if input::is_mouse_button_pressed(MouseButton::Left) {
+            dbg!("{}", mouse_position());
+        }
+
         let (input_position, is_started, is_ended) = if touches.is_empty() {
             let pos = Vec2::from(mouse_position());
             let is_started = is_mouse_button_pressed(MouseButton::Left);
@@ -164,9 +168,11 @@ impl GameState {
         {
             self.button_index = None;
         } else if let Some(draggable) = &self.current_draggable {
+            let t = &self.textures[draggable.texture_id];
+            let position = input_position - vec2(0.0, t.height() / 2.0 + CROSS_OFFSET);
             self.dropped_items
-                .push(DroppedItem::new(draggable.texture_id, input_position));
-            dbg!(draggable.texture_id, input_position - self.map.rect.point());
+                .push(DroppedItem::new(draggable.texture_id, position));
+            dbg!(draggable.texture_id, input_position, self.map.rect.point());
         }
         self.current_draggable = None;
         self.is_dragging = false;
@@ -212,6 +218,7 @@ struct DroppedItem {
 
 impl DroppedItem {
     fn new(texture_id: usize, position: Vec2) -> Self {
+        dbg!(position);
         Self {
             texture_id,
             position_on_map: position,
@@ -228,7 +235,7 @@ impl DroppedItem {
         draw_texture_ex(
             t,
             self.position_on_map.x - size.x / 2.0,
-            self.position_on_map.y - size.y / 2.0 - t.height() / 2.0 - CROSS_OFFSET,
+            self.position_on_map.y - size.y / 2.0,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(Vec2::new(size.x, size.y)),
