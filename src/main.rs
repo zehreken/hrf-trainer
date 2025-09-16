@@ -64,6 +64,8 @@ impl GameState {
         buttons.push(colorful_button);
         let orange_button = Button::new(3, Vec2::new(0.0, 340.0), 4);
         buttons.push(orange_button);
+        let go_button = Button::new(4, Vec2::new(0.0, 420.0), 4);
+        buttons.push(go_button);
 
         let map = Draggable::new(
             Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
@@ -141,32 +143,37 @@ impl GameState {
         }
         for (index, button) in self.buttons.iter().enumerate() {
             if point_in_rect(input_position, button.rect) {
-                let size = self.textures[button.texture_id].size();
-                let mut draggable = Draggable::new(
-                    Rect::new(
-                        input_position.x,
-                        input_position.y,
-                        self.textures[button.texture_id].width(),
-                        self.textures[button.texture_id].height(),
-                    ),
-                    button.texture_id,
-                );
-                draggable.drag_offset = -size / 2.0;
-                self.current_draggable = Some(draggable);
-                self.is_dragging = true;
-                self.button_index = Some(index);
-                break;
+                if button.id == 4 {
+                    self.button_index = Some(4); // Go button
+                    break;
+                } else {
+                    let size = self.textures[button.texture_id].size();
+                    let mut draggable = Draggable::new(
+                        Rect::new(
+                            input_position.x,
+                            input_position.y,
+                            self.textures[button.texture_id].width(),
+                            self.textures[button.texture_id].height(),
+                        ),
+                        button.texture_id,
+                    );
+                    draggable.drag_offset = -size / 2.0;
+                    self.current_draggable = Some(draggable);
+                    self.is_dragging = true;
+                    self.button_index = Some(index);
+                    break;
+                }
             }
         }
     }
 
     fn handle_end(&mut self, input_position: Vec2) {
-        if self.button_index.is_some()
-            && point_in_rect(
-                input_position,
-                self.buttons[self.button_index.unwrap()].rect,
-            )
+        if let Some(button_index) = self.button_index
+            && point_in_rect(input_position, self.buttons[button_index].rect)
         {
+            if button_index == 4 {
+                println!("GO");
+            }
             self.button_index = None;
         } else if let Some(draggable) = &self.current_draggable {
             let t = &self.textures[draggable.texture_id];
@@ -301,6 +308,7 @@ impl Draggable {
 }
 
 struct Button {
+    id: u8,
     rect: Rect,
     texture_id: usize,
 }
@@ -308,6 +316,7 @@ struct Button {
 impl Button {
     fn new(id: u8, position: Vec2, texture_id: usize) -> Self {
         Self {
+            id,
             rect: Rect::new(position.x, position.y, 60.0, 60.0),
             texture_id,
         }
