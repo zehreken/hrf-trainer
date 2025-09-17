@@ -64,7 +64,7 @@ impl GameState {
         buttons.push(colorful_button);
         let orange_button = Button::new(3, Vec2::new(0.0, 340.0), 4);
         buttons.push(orange_button);
-        let go_button = Button::new(4, Vec2::new(0.0, 420.0), 4);
+        let go_button = Button::new(4, Vec2::new(0.0, 420.0), 5);
         buttons.push(go_button);
 
         let map = Draggable::new(
@@ -78,6 +78,7 @@ impl GameState {
             textures.green_buoy,
             textures.colorful_buoy,
             textures.orange_buoy,
+            textures.go_label,
             textures.button_background,
             textures.cross,
         ];
@@ -293,7 +294,7 @@ impl Draggable {
                 ..Default::default()
             },
         );
-        let cross = &textures[6];
+        let cross = &textures[7];
         draw_texture_ex(
             cross,
             self.rect.x + (t.width() - cross.width()) / 2.0,
@@ -323,7 +324,7 @@ impl Button {
     }
 
     fn draw(&self, textures: &Vec<Texture2D>) {
-        let t = &textures[5];
+        let t = &textures[6];
         draw_texture_ex(
             t,
             self.rect.x,
