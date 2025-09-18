@@ -1,9 +1,13 @@
 // main.rs
+mod config;
 mod map_data;
 mod utils;
 
-use crate::utils::{Textures, point_in_rect};
-use macroquad::{input, prelude::*};
+use crate::{
+    config::*,
+    utils::{Textures, point_in_rect},
+};
+use macroquad::{input, prelude::*, texture};
 
 const CROSS_OFFSET: f32 = 20.0;
 
@@ -97,10 +101,10 @@ impl GameState {
     fn update(&mut self) {
         let touches = touches();
 
-        if input::is_mouse_button_pressed(MouseButton::Left) {
-            let mouse_pos: Vec2 = mouse_position().into();
-            dbg!("{}", mouse_pos - self.map.rect.point());
-        }
+        // if input::is_mouse_button_pressed(MouseButton::Left) {
+        //     let mouse_pos: Vec2 = mouse_position().into();
+        //     dbg!("{}", mouse_pos - self.map.rect.point());
+        // }
 
         let (input_position, is_started, is_ended) = if touches.is_empty() {
             let pos = Vec2::from(mouse_position());
@@ -182,6 +186,8 @@ impl GameState {
             self.dropped_items
                 .push(DroppedItem::new(draggable.texture_id, position));
             dbg!(draggable.texture_id, input_position, self.map.rect.point());
+
+            check(draggable.texture_id, position, self.map.rect.point());
         }
         self.current_draggable = None;
         self.is_dragging = false;
@@ -208,6 +214,15 @@ impl GameState {
             self.button_index.is_some(),
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
+
+        for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
+            for pos in positions {
+                let (x, y) = (pos.x + self.map.rect.x, pos.y + self.map.rect.y);
+                draw_circle_lines(x, y, RANGE_10, 1.0, GREEN);
+                draw_circle_lines(x, y, RANGE_5, 1.0, YELLOW);
+                draw_circle_lines(x, y, RANGE_CLOSE, 1.0, RED);
+            }
+        }
     }
 
     fn reveal(&mut self) {
@@ -215,6 +230,24 @@ impl GameState {
             for pos in positions {
                 self.dropped_items
                     .push(DroppedItem::new(*texture_id, *pos + self.map.rect.point()));
+            }
+        }
+    }
+}
+
+fn check(item_id: usize, item_pos: Vec2, map_offset: Vec2) {
+    let item_pos = item_pos - map_offset;
+    for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
+        for pos in positions {
+            let distance = (item_pos - *pos).length();
+            if item_id == *texture_id {
+                if distance < RANGE_10 {
+                    println!("10 points");
+                } else if distance < RANGE_5 {
+                    println!("5 points");
+                } else if distance < RANGE_CLOSE {
+                    println!("Close but...");
+                }
             }
         }
     }
@@ -325,10 +358,11 @@ impl Button {
 
     fn draw(&self, textures: &Vec<Texture2D>) {
         let t = &textures[6];
+        let (x, y) = (self.rect.x, self.rect.y);
         draw_texture_ex(
             t,
-            self.rect.x,
-            self.rect.y,
+            x,
+            y,
             Color::new(1.0, 1.0, 1.0, 0.5),
             DrawTextureParams {
                 dest_size: Some(Vec2::new(60.0, 60.0)),
@@ -339,13 +373,14 @@ impl Button {
         let size = Vec2::new(t.width() * 0.5, t.height() * 0.5);
         draw_texture_ex(
             t,
-            self.rect.x + 30.0 - size.x / 2.0,
-            self.rect.y + 30.0 - size.y / 2.0,
+            x + 30.0 - size.x / 2.0,
+            y + 30.0 - size.y / 2.0,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(Vec2::new(size.x, size.y)),
                 ..Default::default()
             },
         );
+        draw_text("x4", x + 40.0, y + 38.0, 40.0, RED);
     }
 }
