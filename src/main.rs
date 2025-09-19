@@ -185,7 +185,7 @@ impl GameState {
             let position = input_position - vec2(0.0, t.height() / 2.0 + CROSS_OFFSET);
             self.dropped_items
                 .push(DroppedItem::new(draggable.texture_id, position));
-            dbg!(draggable.texture_id, input_position, self.map.rect.point());
+            // dbg!(draggable.texture_id, input_position, self.map.rect.point());
 
             check(draggable.texture_id, position, self.map.rect.point());
         }
@@ -260,7 +260,6 @@ struct DroppedItem {
 
 impl DroppedItem {
     fn new(texture_id: usize, position: Vec2) -> Self {
-        dbg!(position);
         Self {
             texture_id,
             position_on_map: position,
