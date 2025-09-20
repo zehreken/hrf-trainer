@@ -1,6 +1,5 @@
-use std::{collections::HashMap, sync::LazyLock};
-
 use macroquad::math::{Vec2, vec2};
+use std::{collections::HashMap, sync::LazyLock};
 
 pub static ARSTAVIKEN_DATA: LazyLock<HashMap<usize, Vec<Vec2>>> = LazyLock::new(|| {
     let mut map = HashMap::new();

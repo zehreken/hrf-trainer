@@ -3,14 +3,13 @@ mod config;
 mod map_data;
 mod utils;
 
-use std::collections::HashMap;
-
 use crate::{
     config::*,
     map_data::get_obstacle_to_count,
     utils::{Textures, point_in_rect},
 };
 use macroquad::prelude::*;
+use std::collections::HashMap;
 
 const CROSS_OFFSET: f32 = 20.0;
 
@@ -59,6 +58,7 @@ struct GameState {
     dropped_items: Vec<DroppedItem>,
     textures: Vec<Texture2D>,
     obstacle_to_count: HashMap<usize, usize>,
+    show_debug_rings: bool,
 }
 
 impl GameState {
@@ -97,6 +97,7 @@ impl GameState {
             dropped_items: vec![],
             textures,
             obstacle_to_count: get_obstacle_to_count(),
+            show_debug_rings: false,
         }
     }
 
@@ -193,7 +194,7 @@ impl GameState {
                 .push(DroppedItem::new(draggable.texture_id, position));
             // dbg!(draggable.texture_id, input_position, self.map.rect.point());
 
-            check(draggable.texture_id, position, self.map.rect.point());
+            self.check(draggable.texture_id, position, self.map.rect.point());
         }
         self.current_draggable = None;
         self.is_dragging = false;
@@ -210,52 +211,61 @@ impl GameState {
         if let Some(draggable) = &self.current_draggable {
             draggable.draw(&self.textures);
         }
+        draw_text(
+            format!("SCORE: {}", self.score).as_str(),
+            screen_width() / 2.0 - 100.0,
+            30.0,
+            48.0,
+            WHITE,
+        );
     }
 
     fn debug_draw(&self) {
         let info = format!(
-            "Version: 0.0.1.0328\nis_dragging: {}\nhas_touch: {}\nbutton: {}",
+            "Version: 0.1.0.2358\nis_dragging: {}\nhas_touch: {}\nbutton: {}",
             self.is_dragging,
             !touches().is_empty(),
             self.button_index.is_some(),
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
 
-        for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
-            for pos in positions {
-                let (x, y) = (pos.x + self.map.rect.x, pos.y + self.map.rect.y);
-                draw_circle_lines(x, y, RANGE_10, 1.0, GREEN);
-                draw_circle_lines(x, y, RANGE_5, 1.0, YELLOW);
-                draw_circle_lines(x, y, RANGE_CLOSE, 1.0, RED);
+        if self.show_debug_rings {
+            for (_texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
+                for pos in positions {
+                    let (x, y) = (pos.x + self.map.rect.x, pos.y + self.map.rect.y);
+                    draw_circle_lines(x, y, RANGE_10, 1.0, GREEN);
+                    draw_circle_lines(x, y, RANGE_5, 1.0, YELLOW);
+                    draw_circle_lines(x, y, RANGE_CLOSE, 1.0, RED);
+                }
             }
         }
     }
 
     fn reveal(&mut self) {
+        self.show_debug_rings = !self.show_debug_rings;
+    }
+
+    fn check(&mut self, item_id: usize, item_pos: Vec2, map_offset: Vec2) {
+        let item_pos = item_pos - map_offset;
+        let mut points = 0;
         for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
             for pos in positions {
-                self.dropped_items
-                    .push(DroppedItem::new(*texture_id, *pos + self.map.rect.point()));
-            }
-        }
-    }
-}
-
-fn check(item_id: usize, item_pos: Vec2, map_offset: Vec2) {
-    let item_pos = item_pos - map_offset;
-    for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
-        for pos in positions {
-            let distance = (item_pos - *pos).length();
-            if item_id == *texture_id {
-                if distance < RANGE_10 {
-                    println!("10 points");
-                } else if distance < RANGE_5 {
-                    println!("5 points");
-                } else if distance < RANGE_CLOSE {
-                    println!("Close but...");
+                let distance = (item_pos - *pos).length();
+                if item_id == *texture_id {
+                    if distance < RANGE_10 {
+                        println!("10 points");
+                        points = 10;
+                    } else if distance < RANGE_5 {
+                        println!("5 points");
+                        points = 5;
+                    } else if distance < RANGE_CLOSE {
+                        println!("Close but...");
+                        points = 0;
+                    }
                 }
             }
         }
+        self.score += points;
     }
 }
 
