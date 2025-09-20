@@ -3,11 +3,14 @@ mod config;
 mod map_data;
 mod utils;
 
+use std::collections::HashMap;
+
 use crate::{
     config::*,
+    map_data::get_obstacle_to_count,
     utils::{Textures, point_in_rect},
 };
-use macroquad::{input, prelude::*, texture};
+use macroquad::prelude::*;
 
 const CROSS_OFFSET: f32 = 20.0;
 
@@ -55,6 +58,7 @@ struct GameState {
     button_index: Option<usize>,
     dropped_items: Vec<DroppedItem>,
     textures: Vec<Texture2D>,
+    obstacle_to_count: HashMap<usize, usize>,
 }
 
 impl GameState {
@@ -68,8 +72,8 @@ impl GameState {
         buttons.push(colorful_button);
         let orange_button = Button::new(3, Vec2::new(0.0, 340.0), 4);
         buttons.push(orange_button);
-        let go_button = Button::new(4, Vec2::new(0.0, 420.0), 5);
-        buttons.push(go_button);
+        // let go_button = Button::new(4, Vec2::new(0.0, 420.0), 5);
+        // buttons.push(go_button);
 
         let map = Draggable::new(
             Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
@@ -95,6 +99,7 @@ impl GameState {
             button_index: None,
             dropped_items: vec![],
             textures,
+            obstacle_to_count: get_obstacle_to_count(),
         }
     }
 
@@ -152,21 +157,24 @@ impl GameState {
                     self.button_index = Some(4); // Go button
                     break;
                 } else {
-                    let size = self.textures[button.texture_id].size();
-                    let mut draggable = Draggable::new(
-                        Rect::new(
-                            input_position.x,
-                            input_position.y,
-                            self.textures[button.texture_id].width(),
-                            self.textures[button.texture_id].height(),
-                        ),
-                        button.texture_id,
-                    );
-                    draggable.drag_offset = -size / 2.0;
-                    self.current_draggable = Some(draggable);
-                    self.is_dragging = true;
-                    self.button_index = Some(index);
-                    break;
+                    if self.obstacle_to_count[&button.texture_id] > 0 {
+                        let size = self.textures[button.texture_id].size();
+                        let mut draggable = Draggable::new(
+                            Rect::new(
+                                input_position.x,
+                                input_position.y,
+                                self.textures[button.texture_id].width(),
+                                self.textures[button.texture_id].height(),
+                            ),
+                            button.texture_id,
+                        );
+                        draggable.drag_offset = -size / 2.0;
+                        self.current_draggable = Some(draggable);
+                        self.is_dragging = true;
+                        self.button_index = Some(index);
+                        *self.obstacle_to_count.get_mut(&button.texture_id).unwrap() -= 1;
+                        break;
+                    }
                 }
             }
         }
@@ -176,10 +184,14 @@ impl GameState {
         if let Some(button_index) = self.button_index
             && point_in_rect(input_position, self.buttons[button_index].rect)
         {
-            if button_index == 4 {
-                println!("GO");
+            let texture_id = self.buttons[button_index].texture_id;
+            if self.obstacle_to_count[&texture_id] > 0 {
+                // if button_index == 4 {
+                //     println!("GO");
+                // }
+                self.button_index = None;
+                *self.obstacle_to_count.get_mut(&texture_id).unwrap() += 1;
             }
-            self.button_index = None;
         } else if let Some(draggable) = &self.current_draggable {
             let t = &self.textures[draggable.texture_id];
             let position = input_position - vec2(0.0, t.height() / 2.0 + CROSS_OFFSET);
@@ -199,7 +211,7 @@ impl GameState {
             draggable.draw(&self.textures);
         }
         for button in &self.buttons {
-            button.draw(&self.textures);
+            button.draw(&self.textures, &self.obstacle_to_count);
         }
         if let Some(draggable) = &self.current_draggable {
             draggable.draw(&self.textures);
@@ -355,7 +367,7 @@ impl Button {
         }
     }
 
-    fn draw(&self, textures: &Vec<Texture2D>) {
+    fn draw(&self, textures: &Vec<Texture2D>, obstacle_to_count: &HashMap<usize, usize>) {
         let t = &textures[6];
         let (x, y) = (self.rect.x, self.rect.y);
         draw_texture_ex(
@@ -380,6 +392,20 @@ impl Button {
                 ..Default::default()
             },
         );
-        draw_text("x4", x + 40.0, y + 38.0, 40.0, RED);
+        let count = obstacle_to_count[&self.texture_id];
+        draw_text(
+            format!("x{}", count).as_str(),
+            x + 36.0,
+            y + 38.0,
+            46.0,
+            GREEN,
+        );
+        draw_text(
+            format!("x{}", count).as_str(),
+            x + 40.0,
+            y + 38.0,
+            40.0,
+            WHITE,
+        );
     }
 }
