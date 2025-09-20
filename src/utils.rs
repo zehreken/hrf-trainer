@@ -9,7 +9,6 @@ pub struct Textures {
     pub red_buoy: Texture2D,
     pub colorful_buoy: Texture2D,
     pub orange_buoy: Texture2D,
-    pub go_label: Texture2D,
 }
 
 impl Textures {
@@ -36,9 +35,6 @@ impl Textures {
         let orange_buoy = load_texture("assets/orange_40x40.png")
             .await
             .map_err(|_| "Failed to load orange_40x40.png")?;
-        let go_label = load_texture("assets/go_60x60.png")
-            .await
-            .map_err(|_| "Failed to load go_60x60.png")?;
 
         Ok(Self {
             map,
@@ -48,7 +44,6 @@ impl Textures {
             red_buoy,
             colorful_buoy,
             orange_buoy,
-            go_label,
         })
     }
 }

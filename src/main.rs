@@ -72,8 +72,6 @@ impl GameState {
         buttons.push(colorful_button);
         let orange_button = Button::new(3, Vec2::new(0.0, 340.0), 4);
         buttons.push(orange_button);
-        // let go_button = Button::new(4, Vec2::new(0.0, 420.0), 5);
-        // buttons.push(go_button);
 
         let map = Draggable::new(
             Rect::new(0.0, 0.0, textures.map.width(), textures.map.height()),
@@ -86,7 +84,6 @@ impl GameState {
             textures.green_buoy,
             textures.colorful_buoy,
             textures.orange_buoy,
-            textures.go_label,
             textures.button_background,
             textures.cross,
         ];
@@ -186,9 +183,6 @@ impl GameState {
         {
             let texture_id = self.buttons[button_index].texture_id;
             if self.obstacle_to_count[&texture_id] > 0 {
-                // if button_index == 4 {
-                //     println!("GO");
-                // }
                 self.button_index = None;
                 *self.obstacle_to_count.get_mut(&texture_id).unwrap() += 1;
             }
@@ -338,7 +332,7 @@ impl Draggable {
                 ..Default::default()
             },
         );
-        let cross = &textures[7];
+        let cross = &textures[6];
         draw_texture_ex(
             cross,
             self.rect.x + (t.width() - cross.width()) / 2.0,
@@ -368,7 +362,7 @@ impl Button {
     }
 
     fn draw(&self, textures: &Vec<Texture2D>, obstacle_to_count: &HashMap<usize, usize>) {
-        let t = &textures[6];
+        let t = &textures[5];
         let (x, y) = (self.rect.x, self.rect.y);
         draw_texture_ex(
             t,
