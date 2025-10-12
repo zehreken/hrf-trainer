@@ -183,10 +183,8 @@ impl GameState {
             && point_in_rect(input_position, self.buttons[button_index].rect)
         {
             let texture_id = self.buttons[button_index].texture_id;
-            if self.obstacle_to_count[&texture_id] > 0 {
-                self.button_index = None;
-                *self.obstacle_to_count.get_mut(&texture_id).unwrap() += 1;
-            }
+            self.button_index = None;
+            *self.obstacle_to_count.get_mut(&texture_id).unwrap() += 1;
         } else if let Some(draggable) = &self.current_draggable {
             let t = &self.textures[draggable.texture_id];
             let position = input_position - vec2(0.0, t.height() / 2.0 + CROSS_OFFSET);
