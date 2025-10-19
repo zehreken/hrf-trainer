@@ -51,6 +51,7 @@ fn window_conf() -> Conf {
 struct GameState {
     score: u32,
     map: Draggable,
+    dialog: Dialog,
     buttons: Vec<Button>,
     is_dragging: bool,
     current_draggable: Option<Draggable>,
@@ -78,18 +79,21 @@ impl GameState {
             0,
         );
 
+        let mut dialog = Dialog::new(textures.gull);
+        dialog.show();
         let textures = vec![
-            textures.map,
-            textures.red_buoy,
-            textures.green_buoy,
-            textures.colorful_buoy,
-            textures.orange_buoy,
-            textures.button_background,
-            textures.cross,
+            textures.map,               // 0
+            textures.red_buoy,          // 1
+            textures.green_buoy,        // 2
+            textures.colorful_buoy,     // 3
+            textures.orange_buoy,       // 4
+            textures.button_background, // 5
+            textures.cross,             // 6
         ];
         Self {
             score: 0,
             map,
+            dialog,
             buttons,
             is_dragging: false,
             current_draggable: None,
@@ -209,6 +213,7 @@ impl GameState {
         if let Some(draggable) = &self.current_draggable {
             draggable.draw(&self.textures);
         }
+        self.dialog.draw();
         draw_text(
             format!("SCORE: {}", self.score).as_str(),
             screen_width() / 2.0 - 100.0,
@@ -409,5 +414,52 @@ impl Button {
             40.0,
             WHITE,
         );
+    }
+}
+
+struct Dialog {
+    is_visible: bool,
+    gull_texture: Texture2D,
+}
+
+impl Dialog {
+    fn new(gull_texture: Texture2D) -> Self {
+        Self {
+            is_visible: false,
+            gull_texture,
+        }
+    }
+
+    fn draw(&self) {
+        let margin = 200.0;
+        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
+        let height = 400.0_f32.min(screen_height() - 2.0 * margin);
+        let x = (screen_width() - width) / 2.0;
+        let y = (screen_height() - height) / 2.0;
+        if self.is_visible {
+            draw_texture(
+                &self.gull_texture,
+                x + width - &self.gull_texture.width(),
+                y - &self.gull_texture.height(),
+                WHITE,
+            );
+            draw_rectangle(x, y, width, height, WHITE);
+            draw_multiline_text(
+                "Hello, I'm Gully!\nI'm the oldest HRF member.\nMy great great great grandparents\nhelped to build the club house\n\nOK...",
+                x + 10.0,
+                y + 40.0,
+                40.0,
+                None,
+                BLACK,
+            );
+        }
+    }
+
+    fn show(&mut self) {
+        self.is_visible = true;
+    }
+
+    fn hide(&mut self) {
+        self.is_visible = false;
     }
 }
