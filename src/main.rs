@@ -113,6 +113,11 @@ impl GameState {
         //     dbg!("{}", mouse_pos - self.map.rect.point());
         // }
 
+        if is_key_pressed(KeyCode::Space) {
+            println!("reveal");
+            self.reveal();
+        }
+
         let (input_position, is_started, is_ended) = if touches.is_empty() {
             let pos = Vec2::from(mouse_position());
             let is_started = is_mouse_button_pressed(MouseButton::Left);
@@ -127,10 +132,6 @@ impl GameState {
 
             (pos, is_started, is_ended)
         };
-        if is_key_pressed(KeyCode::Space) {
-            println!("reveal");
-            self.reveal();
-        }
 
         if is_started {
             self.handle_start(input_position);
@@ -149,6 +150,10 @@ impl GameState {
     }
 
     fn handle_start(&mut self, input_position: Vec2) {
+        if self.dialog.is_visible {
+            self.dialog.is_visible = false;
+            return;
+        }
         if point_in_rect(input_position, self.map.rect) {
             self.is_dragging = true;
             self.map.drag_offset = self.map.rect.point() - input_position;
@@ -213,7 +218,7 @@ impl GameState {
         if let Some(draggable) = &self.current_draggable {
             draggable.draw(&self.textures);
         }
-        self.dialog.draw();
+        self.dialog.draw(false, config::DIALOG_01);
         draw_text(
             format!("SCORE: {}", self.score).as_str(),
             screen_width() / 2.0 - 100.0,
@@ -225,10 +230,13 @@ impl GameState {
 
     fn debug_draw(&self) {
         let info = format!(
-            "Version: 0.1.0.2358\nis_dragging: {}\nhas_touch: {}\nbutton: {}",
+            "Version: 0.1.0.2358\nis_dragging: {}\nhas_touch: {}\nbutton: {}\nw: {} h: {} s: {}",
             self.is_dragging,
             !touches().is_empty(),
             self.button_index.is_some(),
+            screen_width(),
+            screen_height(),
+            screen_dpi_scale(),
         );
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
 
@@ -430,12 +438,12 @@ impl Dialog {
         }
     }
 
-    fn draw(&self) {
-        let margin = 200.0;
-        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
-        let height = 400.0_f32.min(screen_height() - 2.0 * margin);
-        let x = (screen_width() - width) / 2.0;
-        let y = (screen_height() - height) / 2.0;
+    fn draw(&self, is_big: bool, text: &str) {
+        let (width, height, x, y) = if is_big {
+            self.big_rect()
+        } else {
+            self.small_rect()
+        };
         if self.is_visible {
             draw_texture(
                 &self.gull_texture,
@@ -444,15 +452,28 @@ impl Dialog {
                 WHITE,
             );
             draw_rectangle(x, y, width, height, WHITE);
-            draw_multiline_text(
-                "Hello, I'm Gully!\nI'm the oldest HRF member.\nMy great great great grandparents\nhelped to build the club house\n\nOK...",
-                x + 10.0,
-                y + 40.0,
-                40.0,
-                None,
-                BLACK,
-            );
+            draw_multiline_text(text, x + 10.0, y + 40.0, 40.0, None, BLACK);
         }
+    }
+
+    fn big_rect(&self) -> (f32, f32, f32, f32) {
+        let margin = 200.0;
+        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
+        let height = 400.0_f32.min(screen_height() - 2.0 * margin);
+        let x = (screen_width() - width) / 2.0;
+        let y = (screen_height() - height) / 2.0;
+
+        return (width, height, x, y);
+    }
+
+    fn small_rect(&self) -> (f32, f32, f32, f32) {
+        let margin = 200.0;
+        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
+        let height = 100.0_f32.min(screen_height() - 2.0 * margin);
+        let x = (screen_width() - width) / 2.0;
+        let y = screen_height() - height;
+
+        return (width, height, x, y);
     }
 
     fn show(&mut self) {
