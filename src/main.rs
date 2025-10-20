@@ -440,7 +440,7 @@ impl Dialog {
 
     fn draw(&self, text: &str) {
         let scaler = if screen_width() < 500.0 { 0.5 } else { 1.0 };
-        let (width, height, x, y) = self.small_rect();
+        let (width, height, x, y) = self.small_rect(scaler);
         if self.is_visible {
             draw_texture_ex(
                 &self.gull_texture,
@@ -459,7 +459,7 @@ impl Dialog {
             draw_multiline_text(
                 text,
                 x + 10.0 * scaler,
-                y + 40.0 * scaler,
+                y + 30.0 * scaler,
                 40.0 * scaler,
                 None,
                 BLACK,
@@ -467,10 +467,10 @@ impl Dialog {
         }
     }
 
-    fn small_rect(&self) -> (f32, f32, f32, f32) {
+    fn small_rect(&self, scaler: f32) -> (f32, f32, f32, f32) {
         let width = screen_width();
-        let height = 200.0;
-        let x = (screen_width() - width) / 2.0;
+        let height = 200.0 * scaler;
+        let x = 0.0;
         let y = screen_height() - height;
 
         return (width, height, x, y);
