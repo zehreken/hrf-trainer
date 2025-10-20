@@ -218,7 +218,7 @@ impl GameState {
         if let Some(draggable) = &self.current_draggable {
             draggable.draw(&self.textures);
         }
-        self.dialog.draw(false, config::DIALOG_01);
+        self.dialog.draw(config::DIALOG_01);
         draw_text(
             format!("SCORE: {}", self.score).as_str(),
             screen_width() / 2.0 - 100.0,
@@ -438,38 +438,38 @@ impl Dialog {
         }
     }
 
-    fn draw(&self, is_big: bool, text: &str) {
-        let (width, height, x, y) = if is_big {
-            self.big_rect()
-        } else {
-            self.small_rect()
-        };
+    fn draw(&self, text: &str) {
+        let scaler = if screen_width() < 500.0 { 0.5 } else { 1.0 };
+        let (width, height, x, y) = self.small_rect();
         if self.is_visible {
-            draw_texture(
+            draw_texture_ex(
                 &self.gull_texture,
-                x + width - &self.gull_texture.width(),
-                y - &self.gull_texture.height(),
+                x + width - &self.gull_texture.width() * scaler,
+                y - &self.gull_texture.height() * scaler,
                 WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(
+                        &self.gull_texture.width() * scaler,
+                        &self.gull_texture.height() * scaler,
+                    )),
+                    ..Default::default()
+                },
             );
             draw_rectangle(x, y, width, height, WHITE);
-            draw_multiline_text(text, x + 10.0, y + 40.0, 40.0, None, BLACK);
+            draw_multiline_text(
+                text,
+                x + 10.0 * scaler,
+                y + 40.0 * scaler,
+                40.0 * scaler,
+                None,
+                BLACK,
+            );
         }
     }
 
-    fn big_rect(&self) -> (f32, f32, f32, f32) {
-        let margin = 200.0;
-        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
-        let height = 400.0_f32.min(screen_height() - 2.0 * margin);
-        let x = (screen_width() - width) / 2.0;
-        let y = (screen_height() - height) / 2.0;
-
-        return (width, height, x, y);
-    }
-
     fn small_rect(&self) -> (f32, f32, f32, f32) {
-        let margin = 200.0;
-        let width = 600.0_f32.min(screen_width() - 2.0 * margin);
-        let height = 100.0_f32.min(screen_height() - 2.0 * margin);
+        let width = screen_width();
+        let height = 200.0;
         let x = (screen_width() - width) / 2.0;
         let y = screen_height() - height;
 
