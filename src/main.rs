@@ -241,9 +241,17 @@ impl GameState {
         draw_multiline_text(&info, 10.0, 20.0, 20.0, None, RED);
 
         if self.show_debug_rings {
-            for (_texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
+            for (texture_id, positions) in map_data::ARSTAVIKEN_DATA.iter() {
                 for pos in positions {
                     let (x, y) = (pos.x + self.map.rect.x, pos.y + self.map.rect.y);
+                    let color = match texture_id {
+                        1 => RED,
+                        2 => GREEN,
+                        3 => PURPLE,
+                        4 => ORANGE,
+                        _ => YELLOW,
+                    };
+                    draw_circle(x, y, 5.0, color);
                     draw_circle_lines(x, y, RANGE_10, 1.0, GREEN);
                     draw_circle_lines(x, y, RANGE_5, 1.0, YELLOW);
                     draw_circle_lines(x, y, RANGE_CLOSE, 1.0, RED);
