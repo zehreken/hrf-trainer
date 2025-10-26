@@ -10,6 +10,7 @@ pub static ARSTAVIKEN_DATA: LazyLock<HashMap<usize, Vec<Vec2>>> = LazyLock::new(
             vec2(2247.4133, 1074.7715),
             vec2(1503.0088, 914.7987),
             vec2(653.0921, 764.4674),
+            vec2(415.0, 737.0),
         ],
     );
     // done
